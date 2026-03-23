@@ -60,6 +60,30 @@ cd argazer
 go build -o argazer .
 ```
 
+### Helm (Kubernetes)
+
+The easiest way to run argazer in Kubernetes as a CronJob:
+
+```bash
+helm repo add vorkerj https://vorkerj.github.io/argazer
+helm repo update
+
+helm install argazer vorkerj/argazer \
+  --set schedule="0 */6 * * *" \
+  --set argocd.url="argocd.example.com" \
+  --set argocd.existingSecret="argazer-credentials" \
+  --set notifications.channel="telegram" \
+  --set notifications.telegram.existingSecret="argazer-credentials"
+```
+
+Or with a values file:
+
+```bash
+helm install argazer vorkerj/argazer -f my-values.yaml
+```
+
+See [charts/argazer/values.yaml](charts/argazer/values.yaml) for all available options.
+
 ### Using Docker
 
 Multi-architecture images available for **AMD64** and **ARM64** (Apple Silicon, Raspberry Pi, AWS Graviton, etc.):
