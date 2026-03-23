@@ -1,0 +1,12 @@
+Argazer has been installed as a CronJob scheduled: {{ .Values.schedule }}
+
+To check the CronJob:
+  kubectl get cronjob {{ include "argazer.fullname" . }} -n {{ .Release.Namespace }}
+
+To manually trigger a run:
+  kubectl create job --from=cronjob/{{ include "argazer.fullname" . }} argazer-manual -n {{ .Release.Namespace }}
+
+To view logs of the last run:
+  kubectl logs -l app.kubernetes.io/name={{ include "argazer.name" . }} -n {{ .Release.Namespace }} --tail=100
+
+Documentation: https://github.com/VorkerJ/argazer
