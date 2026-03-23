@@ -85,6 +85,14 @@ func run(cmd *cobra.Command, args []string) error {
 	// Set up logging
 	logger := setupLogging(cfg.Verbose, cfg.LogFormat)
 
+	// Cap concurrency to prevent goroutine explosion with many Git-based repos
+	const maxConcurrency = 50
+	if cfg.Concurrency > maxConcurrency {
+		logger.Warnf("concurrency value %d exceeds maximum %d, capping to %d",
+			cfg.Concurrency, maxConcurrency, maxConcurrency)
+		cfg.Concurrency = maxConcurrency
+	}
+
 	logger.WithFields(logrus.Fields{
 		"argocd_url":   cfg.ArgocdURL,
 		"projects":     cfg.Projects,
