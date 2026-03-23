@@ -39,6 +39,17 @@ type ChartMetadata struct {
 	APIVersion  string `yaml:"apiVersion"`
 }
 
+// validateChartPath checks that chartPath does not escape base via path traversal.
+// filepath.Join resolves ".." components, so this check is performed after joining.
+func validateChartPath(base, chartPath string) error {
+	fullPath := filepath.Join(base, chartPath, "Chart.yaml")
+	cleanBase := filepath.Clean(base) + string(os.PathSeparator)
+	if !strings.HasPrefix(fullPath, cleanBase) {
+		return fmt.Errorf("invalid chart path: path traversal detected")
+	}
+	return nil
+}
+
 // isGitURL determines if a URL is a Git repository
 func isGitURL(repoURL string) bool {
 	// Git URLs typically:
@@ -203,6 +214,11 @@ func (g *GitClient) GetChartVersion(ctx context.Context, repoURL, chartPath stri
 	_, err = git.PlainCloneContext(ctx, tmpDir, false, cloneOpts)
 	if err != nil {
 		return "", fmt.Errorf("failed to clone repository: %w", err)
+	}
+
+	// Validate chartPath to prevent path traversal attacks
+	if err := validateChartPath(tmpDir, chartPath); err != nil {
+		return "", err
 	}
 
 	// Construct path to Chart.yaml

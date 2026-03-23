@@ -93,6 +93,35 @@ func TestNewGitClient(t *testing.T) {
 	})
 }
 
+func TestValidateChartPath(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	tests := []struct {
+		name      string
+		chartPath string
+		wantErr   bool
+	}{
+		{"normal path", "charts/myapp", false},
+		{"single name", "myapp", false},
+		{"dot path", ".", false},
+		{"path traversal double dot", "../../etc/passwd", true},
+		{"path traversal single dot", "../outside", true},
+		{"traversal buried in path", "valid/../../../escape", true},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			err := validateChartPath(tmpDir, tc.chartPath)
+			if tc.wantErr && err == nil {
+				t.Errorf("chartPath %q: expected error, got nil", tc.chartPath)
+			}
+			if !tc.wantErr && err != nil {
+				t.Errorf("chartPath %q: unexpected error: %v", tc.chartPath, err)
+			}
+		})
+	}
+}
+
 // Integration test - only runs with real Git repo (skip in CI)
 func TestGitClient_GetLatestVersion_Integration(t *testing.T) {
 	if testing.Short() {
