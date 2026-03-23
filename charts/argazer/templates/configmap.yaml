@@ -55,3 +55,7 @@ data:
     {{- end }}
     {{- end }}
     {{- /* username/password injected via AG_AUTH_USER_N / AG_AUTH_PASS_N env vars in the CronJob */}}
+    {{- if .Values.messageTemplate }}
+    message_template: |
+{{ .Values.messageTemplate | indent 4 }}
+    {{- end }}

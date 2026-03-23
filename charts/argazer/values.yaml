@@ -36,6 +36,17 @@ config:
   sourceName: ""
   verbose: false
 
+# Custom notification message template (optional, Go text/template syntax)
+# Available fields: .AppName, .Project, .ChartName, .CurrentVersion, .LatestVersion,
+#                   .RepoURL, .ConstraintApplied, .HasUpdateOutsideConstraint, .LatestVersionAll
+# If empty, the default format is used.
+messageTemplate: ""
+# Example for Telegram markdown:
+# messageTemplate: |
+#   🚀 *{{.AppName}}* ({{.Project}})
+#   📦 {{.ChartName}}: {{.CurrentVersion}} -> {{.LatestVersion}}
+#   🔗 {{.RepoURL}}
+
 # Notification settings
 notifications:
   # "telegram" | "email" | "slack" | "teams" | "webhook" | ""

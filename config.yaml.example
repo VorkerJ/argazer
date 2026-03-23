@@ -80,6 +80,16 @@ version_constraint: "major"
 # - "markdown": Markdown formatted output for documentation
 output_format: "table"
 
+# Custom Notification Message Template (optional)
+# Uses Go text/template syntax. Available fields:
+#   .AppName, .Project, .ChartName, .CurrentVersion, .LatestVersion,
+#   .RepoURL, .ConstraintApplied, .HasUpdateOutsideConstraint, .LatestVersionAll
+# If empty, the default format is used.
+# message_template: |
+#   🚀 *{{.AppName}}* ({{.Project}})
+#   📦 {{.ChartName}}: {{.CurrentVersion}} -> {{.LatestVersion}}
+#   🔗 {{.RepoURL}}
+
 # Log Format
 # Controls the format of application logs (not the scan results)
 # - "json": Structured JSON logs for production/parsing (default)
