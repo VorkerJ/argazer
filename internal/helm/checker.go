@@ -18,7 +18,6 @@ import (
 type Checker struct {
 	httpClient   *http.Client
 	ociChecker   *OCIChecker
-	gitClient    *GitClient
 	authProvider *auth.Provider
 	logger       *logrus.Entry
 }
@@ -30,7 +29,6 @@ func NewChecker(authProvider *auth.Provider, logger *logrus.Entry) (*Checker, er
 			Timeout: 30 * time.Second,
 		},
 		ociChecker:   NewOCIChecker(authProvider, logger.WithField("type", "oci")),
-		gitClient:    NewGitClient("", "", logger.WithField("type", "git")), // Auth will be set per-request if needed
 		authProvider: authProvider,
 		logger:       logger,
 	}, nil
@@ -46,13 +44,15 @@ func (c *Checker) GetLatestVersion(ctx context.Context, repoURL, chartName strin
 		}).Info("Detected Git repository, using Git checker")
 
 		// Get auth credentials for this repo if available
-		if auth := c.authProvider.GetCredentials(repoURL); auth != nil {
-			c.gitClient.username = auth.Username
-			c.gitClient.password = auth.Password
+		var username, password string
+		if creds := c.authProvider.GetCredentials(repoURL); creds != nil {
+			username = creds.Username
+			password = creds.Password
 		}
 
 		// Use chartName as the path within the repo
-		return c.gitClient.GetLatestVersion(ctx, repoURL, chartName)
+		localGit := NewGitClient(username, password, c.logger.WithField("type", "git"))
+		return localGit.GetLatestVersion(ctx, repoURL, chartName)
 	}
 
 	// Check if this is an OCI repository (no http/https prefix)
@@ -77,13 +77,15 @@ func (c *Checker) GetLatestVersionWithConstraint(ctx context.Context, repoURL, c
 		}).Info("Detected Git repository, using Git checker with constraint")
 
 		// Get auth credentials for this repo if available
-		if auth := c.authProvider.GetCredentials(repoURL); auth != nil {
-			c.gitClient.username = auth.Username
-			c.gitClient.password = auth.Password
+		var username, password string
+		if creds := c.authProvider.GetCredentials(repoURL); creds != nil {
+			username = creds.Username
+			password = creds.Password
 		}
 
 		// Get all versions from Git tags
-		versions, err := c.gitClient.GetAllVersions(ctx, repoURL, chartName)
+		localGit := NewGitClient(username, password, c.logger.WithField("type", "git"))
+		versions, err := localGit.GetAllVersions(ctx, repoURL, chartName)
 		if err != nil {
 			return nil, err
 		}

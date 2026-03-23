@@ -185,15 +185,6 @@ func TestGitClient_Authentication(t *testing.T) {
 		assert.Equal(t, "mypassword", client.password)
 	})
 
-	t.Run("credentials can be updated", func(t *testing.T) {
-		client := NewGitClient("", "", logger)
-
-		client.username = "newuser"
-		client.password = "newpass"
-
-		assert.Equal(t, "newuser", client.username)
-		assert.Equal(t, "newpass", client.password)
-	})
 }
 
 // Test version tag parsing logic

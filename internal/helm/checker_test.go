@@ -1,6 +1,8 @@
 package helm
 
 import (
+	"context"
+	"fmt"
 	"testing"
 
 	"argazer/internal/auth"
@@ -22,6 +24,36 @@ func TestNewChecker(t *testing.T) {
 
 	if checker.httpClient == nil {
 		t.Error("Expected HTTP client to be initialized")
+	}
+}
+
+func TestChecker_GetLatestVersion_ConcurrentCalls_NoRace(t *testing.T) {
+	// Run with: go test -race ./internal/helm/...
+	// The race detector catches concurrent field writes even on error paths.
+	logger := logrus.NewEntry(logrus.New())
+	authProvider, _ := auth.NewProvider(nil, logger)
+	checker, err := NewChecker(authProvider, logger)
+	if err != nil {
+		t.Fatalf("NewChecker failed: %v", err)
+	}
+
+	const numGoroutines = 10
+	done := make(chan struct{}, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func(i int) {
+			defer func() { done <- struct{}{} }()
+			//nolint:errcheck
+			checker.GetLatestVersion(
+				context.Background(),
+				fmt.Sprintf("https://github.com/nonexistent/repo-%d.git", i),
+				"charts",
+			)
+		}(i)
+	}
+
+	for i := 0; i < numGoroutines; i++ {
+		<-done
 	}
 }
 
