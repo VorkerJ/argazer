@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Argazer — Helm Chart Updates Monitor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --accent2: #3fb950;
+      --accent3: #d2a8ff;
+      --tag-bg: #1f2937;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 2rem 1.5rem 2.5rem;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--accent); }
+
+    .tagline {
+      color: var(--muted);
+      margin-top: .5rem;
+      font-size: 1.1rem;
+    }
+
+    .badges {
+      display: flex;
+      gap: .6rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1.2rem;
+    }
+    .badges img { height: 20px; }
+
+    /* ── Main ── */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 3rem 1.5rem 4rem;
+    }
+
+    /* ── Section headings ── */
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      padding-bottom: .5rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+    }
+    section { margin-bottom: 3rem; }
+
+    /* ── Feature cards ── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 1rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.1rem 1.2rem;
+    }
+    .card-icon { font-size: 1.4rem; margin-bottom: .4rem; }
+    .card-title { font-weight: 600; font-size: .95rem; margin-bottom: .3rem; }
+    .card-desc { color: var(--muted); font-size: .875rem; }
+
+    /* ── Code blocks ── */
+    .code-block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.2rem 1.4rem;
+      overflow-x: auto;
+      margin-bottom: 1rem;
+    }
+    .code-block pre {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      font-size: .875rem;
+      white-space: pre;
+      color: var(--text);
+    }
+    .code-block .comment { color: var(--muted); }
+    .code-block .cmd { color: var(--accent2); }
+    .code-block .flag { color: var(--accent3); }
+    .code-block .val { color: var(--accent); }
+
+    /* ── Steps ── */
+    .steps { display: flex; flex-direction: column; gap: 1rem; }
+    .step {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-start;
+    }
+    .step-num {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+      font-size: .85rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-body { flex: 1; }
+    .step-title { font-weight: 600; margin-bottom: .4rem; }
+    .step-desc { color: var(--muted); font-size: .9rem; }
+
+    /* ── Table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+    th {
+      text-align: left;
+      padding: .6rem .8rem;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-weight: 500;
+    }
+    td {
+      padding: .6rem .8rem;
+      border-bottom: 1px solid var(--border);
+    }
+    tr:last-child td { border-bottom: none; }
+    code {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: .85em;
+      background: var(--tag-bg);
+      padding: .15em .4em;
+      border-radius: 4px;
+      color: var(--accent3);
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--muted);
+      font-size: .875rem;
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">⚓ <span>Argazer</span></div>
+  <div class="tagline">Monitor ArgoCD applications for Helm chart updates and get notified</div>
+  <div class="badges">
+    <img src="https://img.shields.io/badge/Made%20with-Claude-8A2BE2?logo=anthropic" alt="Claude" />
+    <img src="https://github.com/VorkerJ/argazer/actions/workflows/ci.yml/badge.svg" alt="CI" />
+    <img src="https://codecov.io/gh/VorkerJ/argazer/branch/main/graph/badge.svg" alt="Coverage" />
+    <img src="https://img.shields.io/github/v/release/VorkerJ/argazer" alt="Release" />
+    <img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="License" />
+  </div>
+</header>
+
+<main>
+
+  <!-- Features -->
+  <section>
+    <h2>Features</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🔍</div>
+        <div class="card-title">ArgoCD Integration</div>
+        <div class="card-desc">Connects via gRPC-Web API, filters apps by project, name, and labels</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📦</div>
+        <div class="card-title">All Repo Types</div>
+        <div class="card-desc">HTTP Helm repos, OCI registries, and Git-based charts — all supported</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔔</div>
+        <div class="card-title">Multi-Channel Notifications</div>
+        <div class="card-desc">Telegram, Email, Slack, Microsoft Teams, or generic Webhook</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">✏️</div>
+        <div class="card-title">Custom Message Templates</div>
+        <div class="card-desc">Define your own Go text/template for notification messages</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <div class="card-title">Private Registries</div>
+        <div class="card-desc">Authenticate to multiple private Helm repos and OCI registries</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚙️</div>
+        <div class="card-title">Flexible Config</div>
+        <div class="card-desc">config.yaml, environment variables, or CLI flags — all supported</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Install -->
+  <section>
+    <h2>Install via Helm</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Add the Helm repository</div>
+          <div class="code-block">
+            <pre><span class="cmd">helm repo add</span> vorkerj https://vorkerj.github.io/argazer
+<span class="cmd">helm repo update</span></pre>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Create a Kubernetes Secret with your credentials</div>
+          <div class="code-block">
+            <pre><span class="cmd">kubectl create secret generic</span> argazer-credentials \
+  <span class="flag">--from-literal</span>=<span class="val">argocd-username</span>=admin \
+  <span class="flag">--from-literal</span>=<span class="val">argocd-password</span>=your-password \
+  <span class="flag">--from-literal</span>=<span class="val">telegram-webhook</span>=https://api.telegram.org/bot.../sendMessage \
+  <span class="flag">--from-literal</span>=<span class="val">telegram-chat-id</span>=123456789</pre>
+          </div>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Install the chart</div>
+          <div class="code-block">
+            <pre><span class="cmd">helm install</span> argazer vorkerj/argazer \
+  <span class="flag">--set</span> <span class="val">schedule</span>="0 */6 * * *" \
+  <span class="flag">--set</span> <span class="val">argocd.url</span>="argocd.example.com" \
+  <span class="flag">--set</span> <span class="val">argocd.existingSecret</span>="argazer-credentials" \
+  <span class="flag">--set</span> <span class="val">notifications.channel</span>="telegram" \
+  <span class="flag">--set</span> <span class="val">notifications.telegram.existingSecret</span>="argazer-credentials"</pre>
+          </div>
+          <div class="step-desc">Or use a <code>values.yaml</code> file: <code>helm install argazer vorkerj/argazer -f my-values.yaml</code></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Template fields -->
+  <section>
+    <h2>Custom Message Template</h2>
+    <p style="color:var(--muted);font-size:.9rem;margin-bottom:1rem;">
+      Define your own notification format using Go <code>text/template</code> syntax.
+      Falls back to the default format on any error.
+    </p>
+    <div class="code-block">
+      <pre><span class="comment"># values.yaml</span>
+messageTemplate: |
+  🚀 *{{.AppName}}* ({{.Project}})
+  📦 {{.ChartName}}: {{.CurrentVersion}} -> {{.LatestVersion}}
+  🔗 {{.RepoURL}}</pre>
+    </div>
+    <table>
+      <thead>
+        <tr><th>Field</th><th>Example</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>.AppName</code></td><td>cert-manager</td></tr>
+        <tr><td><code>.Project</code></td><td>internal</td></tr>
+        <tr><td><code>.ChartName</code></td><td>cert-manager</td></tr>
+        <tr><td><code>.CurrentVersion</code></td><td>1.18.5</td></tr>
+        <tr><td><code>.LatestVersion</code></td><td>v1.20.0</td></tr>
+        <tr><td><code>.RepoURL</code></td><td>https://charts.jetstack.io</td></tr>
+        <tr><td><code>.ConstraintApplied</code></td><td>minor</td></tr>
+        <tr><td><code>.HasUpdateOutsideConstraint</code></td><td>true</td></tr>
+        <tr><td><code>.LatestVersionAll</code></td><td>2.0.0</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Notification channels -->
+  <section>
+    <h2>Notification Channels</h2>
+    <table>
+      <thead>
+        <tr><th>Channel</th><th>values.yaml key</th><th>Required fields</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Telegram</td><td><code>notifications.telegram</code></td><td>webhook, chatId</td></tr>
+        <tr><td>Email</td><td><code>notifications.email</code></td><td>smtpHost, from, to</td></tr>
+        <tr><td>Slack</td><td><code>notifications.slack</code></td><td>webhook</td></tr>
+        <tr><td>Microsoft Teams</td><td><code>notifications.teams</code></td><td>webhook</td></tr>
+        <tr><td>Generic Webhook</td><td><code>notifications.webhook</code></td><td>url</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Links -->
+  <section>
+    <h2>Resources</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">📖</div>
+        <div class="card-title"><a href="https://github.com/VorkerJ/argazer">GitHub Repository</a></div>
+        <div class="card-desc">Source code, issues, and full documentation</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">📝</div>
+        <div class="card-title"><a href="https://github.com/VorkerJ/argazer/blob/main/charts/argazer/values.yaml">values.yaml reference</a></div>
+        <div class="card-desc">All available Helm chart configuration options</div>
+      </div>
+      <div class="card">
+        <div class="card-icon">🚀</div>
+        <div class="card-title"><a href="https://github.com/VorkerJ/argazer/releases">Releases</a></div>
+        <div class="card-desc">Changelog and pre-built binaries for Linux, macOS, Windows</div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>
+    <a href="https://github.com/VorkerJ/argazer">VorkerJ/argazer</a> &nbsp;·&nbsp;
+    Apache 2.0 License &nbsp;·&nbsp;
+    Helm repo: <code>https://vorkerj.github.io/argazer</code>
+  </p>
+</footer>
+
+</body>
+</html>
