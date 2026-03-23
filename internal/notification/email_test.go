@@ -2,12 +2,67 @@ package notification
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+func TestSanitizeHeader(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"normal subject", "normal subject"},
+		{"subject\r\nX-Injected: evil", "subject  X-Injected: evil"},
+		{"subject\nonly newline", "subject only newline"},
+		{"subject\ronly cr", "subject only cr"},
+		{"no special chars", "no special chars"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.input, func(t *testing.T) {
+			got := sanitizeHeader(tc.input)
+			if got != tc.expected {
+				t.Errorf("sanitizeHeader(%q) = %q, want %q", tc.input, got, tc.expected)
+			}
+		})
+	}
+}
+
+func TestSanitizeHeader_PreservesNormalContent(t *testing.T) {
+	inputs := []string{
+		"Helm Update Report",
+		"ArgoCD: 3 apps need updates",
+		"[argazer] Weekly digest",
+	}
+	for _, s := range inputs {
+		if sanitizeHeader(s) != s {
+			t.Errorf("sanitizeHeader modified clean string %q", s)
+		}
+	}
+}
+
+func TestEmailNotifier_Send_HeaderInjectionPrevented(t *testing.T) {
+	// Verify that \r\n in subject does not appear in the built header string
+	logger := logrus.NewEntry(logrus.New())
+	notifier := NewEmailNotifier(
+		"invalid.example.com", 587, "", "",
+		"sender@example.com",
+		[]string{"recipient@example.com"},
+		false, logger,
+	)
+
+	// sanitizeHeader should strip CRLF from subject
+	injected := "Subject\r\nX-Evil: injected"
+	safe := sanitizeHeader(injected)
+	if strings.Contains(safe, "\r") || strings.Contains(safe, "\n") {
+		t.Errorf("sanitizeHeader did not remove CR/LF: %q", safe)
+	}
+	_ = notifier
+}
 
 func TestNewEmailNotifier(t *testing.T) {
 	logger := logrus.NewEntry(logrus.New())

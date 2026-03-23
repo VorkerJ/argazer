@@ -36,13 +36,29 @@ func NewEmailNotifier(smtpHost string, smtpPort int, smtpUsername, smtpPassword,
 	}
 }
 
+// sanitizeHeader removes CR and LF characters from email header values
+// to prevent header injection and SMTP injection attacks.
+func sanitizeHeader(s string) string {
+	s = strings.ReplaceAll(s, "\r", " ")
+	s = strings.ReplaceAll(s, "\n", " ")
+	return s
+}
+
 // Send sends an email notification (implements Notifier interface)
 func (e *EmailNotifier) Send(ctx context.Context, subject, message string) error {
+	// Sanitize header fields to prevent header injection and SMTP injection
+	safeSubject := sanitizeHeader(subject)
+	safeFrom := sanitizeHeader(e.from)
+	safeTo := make([]string, len(e.to))
+	for i, addr := range e.to {
+		safeTo[i] = sanitizeHeader(addr)
+	}
+
 	// Prepare email headers and body
 	body := fmt.Sprintf("From: %s\r\nTo: %s\r\nSubject: %s\r\n\r\n%s",
-		e.from,
-		strings.Join(e.to, ", "),
-		subject,
+		safeFrom,
+		strings.Join(safeTo, ", "),
+		safeSubject,
 		message,
 	)
 
@@ -56,6 +72,11 @@ func (e *EmailNotifier) Send(ctx context.Context, subject, message string) error
 		"subject":   subject,
 	}).Debug("Sending email notification")
 
+	// Warn if credentials are sent over a plaintext connection
+	if !e.useTLS && e.smtpUsername != "" {
+		e.logger.Warn("SMTP authentication is being used without TLS — credentials will be sent in plaintext")
+	}
+
 	var auth smtp.Auth
 	if e.smtpUsername != "" && e.smtpPassword != "" {
 		auth = smtp.PlainAuth("", e.smtpUsername, e.smtpPassword, e.smtpHost)
@@ -63,19 +84,20 @@ func (e *EmailNotifier) Send(ctx context.Context, subject, message string) error
 
 	// Send email with TLS if enabled
 	if e.useTLS {
-		return e.sendWithTLS(addr, auth, []byte(body))
+		return e.sendWithTLS(addr, auth, safeFrom, safeTo, []byte(body))
 	}
 
 	// Send without TLS
-	err := smtp.SendMail(addr, auth, e.from, e.to, []byte(body))
+	err := smtp.SendMail(addr, auth, safeFrom, safeTo, []byte(body))
 	if err == nil {
 		e.logger.WithField("to", e.to).Info("Successfully sent email notification")
 	}
 	return err
 }
 
-// sendWithTLS sends email with TLS encryption
-func (e *EmailNotifier) sendWithTLS(addr string, auth smtp.Auth, body []byte) error {
+// sendWithTLS sends email with TLS encryption.
+// from and to are pre-sanitized by the caller.
+func (e *EmailNotifier) sendWithTLS(addr string, auth smtp.Auth, from string, to []string, body []byte) error {
 	// Connect to SMTP server
 	client, err := smtp.Dial(addr)
 	if err != nil {
@@ -104,14 +126,14 @@ func (e *EmailNotifier) sendWithTLS(addr string, auth smtp.Auth, body []byte) er
 	}
 
 	// Set sender
-	if err := client.Mail(e.from); err != nil {
+	if err := client.Mail(from); err != nil {
 		return fmt.Errorf("failed to set sender: %w", err)
 	}
 
 	// Set recipients
-	for _, to := range e.to {
-		if err := client.Rcpt(to); err != nil {
-			return fmt.Errorf("failed to set recipient %s: %w", to, err)
+	for _, recipient := range to {
+		if err := client.Rcpt(recipient); err != nil {
+			return fmt.Errorf("failed to set recipient %s: %w", recipient, err)
 		}
 	}
 
