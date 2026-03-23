@@ -1,13 +1,16 @@
 package notification
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
+	"text/template"
 )
 
 // MessageFormatter formats application check results for notifications
 type MessageFormatter struct {
-	MaxMessageLength int // Maximum length per message (default: 3900 for Telegram)
+	MaxMessageLength int                // Maximum length per message (default: 3900 for Telegram)
+	Template         *template.Template // nil = use default format
 }
 
 // NewMessageFormatter creates a new message formatter with default settings
@@ -15,6 +18,19 @@ func NewMessageFormatter() *MessageFormatter {
 	return &MessageFormatter{
 		MaxMessageLength: 3900, // Based on Telegram's 4096 character limit with safety margin
 	}
+}
+
+// NewMessageFormatterWithTemplate creates a formatter with a custom Go template.
+// Returns error if the template fails to parse.
+func NewMessageFormatterWithTemplate(tmplStr string) (*MessageFormatter, error) {
+	t, err := template.New("message").Parse(tmplStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid message template: %w", err)
+	}
+	return &MessageFormatter{
+		MaxMessageLength: 3900,
+		Template:         t,
+	}, nil
 }
 
 // ApplicationUpdate represents an application with available updates for notification
@@ -64,6 +80,14 @@ func (f *MessageFormatter) FormatMessages(updates []ApplicationUpdate) []string 
 
 // formatSingleUpdate formats a single application update
 func (f *MessageFormatter) formatSingleUpdate(update ApplicationUpdate) string {
+	if f.Template != nil {
+		var buf bytes.Buffer
+		if err := f.Template.Execute(&buf, update); err == nil {
+			return buf.String()
+		}
+		// execution error: fall through to default
+	}
+
 	var sb strings.Builder
 
 	// Compact format: app name as header with project
