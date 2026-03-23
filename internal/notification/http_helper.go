@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -95,8 +96,9 @@ func (n *HTTPNotifier) SendJSON(ctx context.Context, payload interface{}) error 
 			continue // Retry on network errors
 		}
 
-		// Close response body in defer
+		// Drain and close response body to allow connection reuse
 		func() {
+			_, _ = io.Copy(io.Discard, resp.Body)
 			if err := resp.Body.Close(); err != nil {
 				n.logger.WithError(err).Warn("Failed to close response body")
 			}

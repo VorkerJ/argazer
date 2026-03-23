@@ -72,9 +72,10 @@ func (e *EmailNotifier) Send(ctx context.Context, subject, message string) error
 		"subject":   subject,
 	}).Debug("Sending email notification")
 
-	// Warn if credentials are sent over a plaintext connection
+	// Refuse to send SMTP credentials over plaintext — set email_use_tls: true
 	if !e.useTLS && e.smtpUsername != "" {
-		e.logger.Warn("SMTP authentication is being used without TLS — credentials will be sent in plaintext")
+		return fmt.Errorf("SMTP authentication over a plaintext connection is not allowed; " +
+			"set email_use_tls: true or remove SMTP credentials")
 	}
 
 	var auth smtp.Auth

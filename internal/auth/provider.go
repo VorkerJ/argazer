@@ -28,6 +28,14 @@ type ConfigAuth struct {
 	Password string
 }
 
+// maskString returns the first two characters of s followed by "***", for safe logging.
+func maskString(s string) string {
+	if len(s) <= 2 {
+		return "***"
+	}
+	return s[:2] + "***"
+}
+
 // NewProvider creates a new authentication provider
 func NewProvider(configAuth []ConfigAuth, logger *logrus.Entry) (*Provider, error) {
 	p := &Provider{
@@ -107,7 +115,7 @@ func (p *Provider) loadConfigAuth(configAuths []ConfigAuth) {
 		p.logger.WithFields(logrus.Fields{
 			"url":        auth.URL,
 			"normalized": normalized,
-			"username":   auth.Username,
+			"username":   maskString(auth.Username),
 		}).Debug("Loaded credentials from config file")
 	}
 }
@@ -178,6 +186,7 @@ func (p *Provider) loadEnvAuth() {
 			"id":         id,
 			"url":        url,
 			"normalized": normalized,
+			"username":   maskString(user),
 		}).Debug("Loaded credentials from environment variables")
 	}
 }

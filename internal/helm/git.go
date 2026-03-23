@@ -15,6 +15,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// gitCloneSemaphore limits the number of concurrent git clone operations
+// to prevent disk/network exhaustion when many Git-based charts are checked.
+var gitCloneSemaphore = make(chan struct{}, 10)
+
 // GitClient handles operations with Git repositories containing Helm charts
 type GitClient struct {
 	username string
@@ -94,12 +98,13 @@ func (g *GitClient) GetLatestVersion(ctx context.Context, repoURL, chartPath str
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Clone options — NoCheckout skips working tree population, saving disk space
+	// Clone options — NoCheckout skips working tree, Depth:1 limits object download
 	cloneOpts := &git.CloneOptions{
 		URL:        repoURL,
 		Progress:   nil, // Silent clone
 		Tags:       git.AllTags,
 		NoCheckout: true,
+		Depth:      1,
 	}
 
 	// Add authentication if provided
@@ -108,6 +113,14 @@ func (g *GitClient) GetLatestVersion(ctx context.Context, repoURL, chartPath str
 			Username: g.username,
 			Password: g.password,
 		}
+	}
+
+	// Acquire git clone semaphore to cap concurrent clones
+	select {
+	case gitCloneSemaphore <- struct{}{}:
+		defer func() { <-gitCloneSemaphore }()
+	case <-ctx.Done():
+		return "", fmt.Errorf("context cancelled waiting for git clone slot: %w", ctx.Err())
 	}
 
 	// Clone the repository
@@ -263,12 +276,13 @@ func (g *GitClient) GetAllVersions(ctx context.Context, repoURL, chartPath strin
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Clone options — NoCheckout skips working tree population, saving disk space
+	// Clone options — NoCheckout skips working tree, Depth:1 limits object download
 	cloneOpts := &git.CloneOptions{
 		URL:        repoURL,
 		Progress:   nil,
 		Tags:       git.AllTags,
 		NoCheckout: true,
+		Depth:      1,
 	}
 
 	// Add authentication if provided
@@ -277,6 +291,14 @@ func (g *GitClient) GetAllVersions(ctx context.Context, repoURL, chartPath strin
 			Username: g.username,
 			Password: g.password,
 		}
+	}
+
+	// Acquire git clone semaphore to cap concurrent clones
+	select {
+	case gitCloneSemaphore <- struct{}{}:
+		defer func() { <-gitCloneSemaphore }()
+	case <-ctx.Done():
+		return nil, fmt.Errorf("context cancelled waiting for git clone slot: %w", ctx.Err())
 	}
 
 	// Clone the repository

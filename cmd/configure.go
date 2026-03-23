@@ -561,6 +561,14 @@ func saveConfiguration(wizard *ConfigWizard) error {
 		cfg.WebhookURL = wizard.WebhookURL
 	}
 
+	// H2: Security warning before writing credentials to disk
+	fmt.Println()
+	fmt.Println("⚠️  SECURITY WARNING")
+	fmt.Println("   The config file will contain credentials in plaintext.")
+	fmt.Println("   Keep it with mode 0600 and never commit it to version control.")
+	fmt.Println("   For production use AG_* environment variables instead.")
+	fmt.Println()
+
 	// Determine config file path
 	var configPath string
 	prompt := &survey.Input{
@@ -570,6 +578,20 @@ func saveConfiguration(wizard *ConfigWizard) error {
 	}
 	if err := survey.AskOne(prompt, &configPath); err != nil {
 		return err
+	}
+
+	// L2: Confirm before overwriting an existing file
+	if _, err := os.Stat(configPath); err == nil {
+		var overwrite bool
+		if err := survey.AskOne(&survey.Confirm{
+			Message: fmt.Sprintf("File %q already exists. Overwrite?", configPath),
+			Default: false,
+		}, &overwrite); err != nil {
+			return err
+		}
+		if !overwrite {
+			return fmt.Errorf("configuration not saved: file already exists")
+		}
 	}
 
 	// Create directory if it doesn't exist

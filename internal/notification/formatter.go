@@ -7,6 +7,13 @@ import (
 	"text/template"
 )
 
+const (
+	// maxTemplateLength caps the template string itself to prevent DoS via complex template parsing.
+	maxTemplateLength = 4096
+	// maxTemplateOutput caps the rendered output per application to prevent memory exhaustion.
+	maxTemplateOutput = 10 * 1024 // 10 KB
+)
+
 // MessageFormatter formats application check results for notifications
 type MessageFormatter struct {
 	MaxMessageLength int                // Maximum length per message (default: 3900 for Telegram)
@@ -23,6 +30,9 @@ func NewMessageFormatter() *MessageFormatter {
 // NewMessageFormatterWithTemplate creates a formatter with a custom Go template.
 // Returns error if the template fails to parse.
 func NewMessageFormatterWithTemplate(tmplStr string) (*MessageFormatter, error) {
+	if len(tmplStr) > maxTemplateLength {
+		return nil, fmt.Errorf("message template too long: %d bytes (max %d)", len(tmplStr), maxTemplateLength)
+	}
 	t, err := template.New("message").Parse(tmplStr)
 	if err != nil {
 		return nil, fmt.Errorf("invalid message template: %w", err)
@@ -83,9 +93,12 @@ func (f *MessageFormatter) formatSingleUpdate(update ApplicationUpdate) string {
 	if f.Template != nil {
 		var buf bytes.Buffer
 		if err := f.Template.Execute(&buf, update); err == nil {
-			return buf.String()
+			if buf.Len() <= maxTemplateOutput {
+				return buf.String()
+			}
+			// output too large: fall through to default
 		}
-		// execution error: fall through to default
+		// execution error or oversized output: fall through to default
 	}
 
 	var sb strings.Builder

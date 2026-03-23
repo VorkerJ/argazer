@@ -147,8 +147,7 @@ type clients struct {
 }
 
 // initializeClients creates all required clients (ArgoCD, Helm, Notifier)
-// Context is reserved for future use when client initialization becomes cancellable
-func initializeClients(_ context.Context, cfg *config.Config, logger *logrus.Entry) (*clients, error) {
+func initializeClients(ctx context.Context, cfg *config.Config, logger *logrus.Entry) (*clients, error) {
 	c := &clients{}
 
 	// Create authentication provider
@@ -171,7 +170,7 @@ func initializeClients(_ context.Context, cfg *config.Config, logger *logrus.Ent
 
 	// Create ArgoCD API client
 	argoLogger := logger.WithField("component", "argocd")
-	argoClient, err := argocd.NewClient(cfg.ArgocdURL, cfg.ArgocdUsername, cfg.ArgocdPassword, cfg.ArgocdInsecure, argoLogger)
+	argoClient, err := argocd.NewClient(ctx, cfg.ArgocdURL, cfg.ArgocdUsername, cfg.ArgocdPassword, cfg.ArgocdInsecure, argoLogger)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ArgoCD client: %w", err)
 	}

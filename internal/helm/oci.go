@@ -62,11 +62,14 @@ func (o *OCIChecker) getTagsFromOCI(ctx context.Context, repoURL, chartName stri
 		"full_repo_path": fullRepoPath,
 	}).Debug("Parsed OCI URL")
 
-	// Determine the scheme - default to https unless explicitly http for localhost/testing
+	// Determine the scheme — default to https; allow http only for localhost/testing
 	scheme := "https"
 	if strings.HasPrefix(registry, "localhost") || strings.HasPrefix(registry, "127.0.0.1") {
-		// Allow http for localhost/testing
 		scheme = "http"
+		if o.authProvider.GetCredentials(registry) != nil {
+			o.logger.WithField("registry", registry).Warn(
+				"Using HTTP (no TLS) with credentials for local OCI registry — credentials will be sent in plaintext")
+		}
 	}
 
 	// Build Docker Registry API v2 endpoint
@@ -90,7 +93,7 @@ func (o *OCIChecker) getTagsFromOCI(ctx context.Context, repoURL, chartName stri
 		req.SetBasicAuth(creds.Username, creds.Password)
 		o.logger.WithFields(logrus.Fields{
 			"source":   creds.Source,
-			"username": creds.Username,
+			"username": creds.Username[:min(2, len(creds.Username))] + "***",
 			"registry": registry,
 		}).Debug("Using authentication for OCI registry")
 	} else {

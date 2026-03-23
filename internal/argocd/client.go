@@ -20,7 +20,7 @@ type Client struct {
 }
 
 // NewClient creates a new ArgoCD API client
-func NewClient(serverURL, username, password string, insecure bool, logger *logrus.Entry) (*Client, error) {
+func NewClient(ctx context.Context, serverURL, username, password string, insecure bool, logger *logrus.Entry) (*Client, error) {
 	logger.WithFields(logrus.Fields{
 		"server":   serverURL,
 		"username": username,
@@ -52,7 +52,7 @@ func NewClient(serverURL, username, password string, insecure bool, logger *logr
 		}
 	}()
 
-	sessionResp, err := sessionClient.Create(context.Background(), &session.SessionCreateRequest{
+	sessionResp, err := sessionClient.Create(ctx, &session.SessionCreateRequest{
 		Username: username,
 		Password: password,
 	})

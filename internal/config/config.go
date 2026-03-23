@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"net/url"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -221,6 +223,16 @@ func validateConfig(cfg *Config) error {
 	if cfg.ArgocdURL == "" {
 		return fmt.Errorf("argocd_url is required")
 	}
+	// L4: basic sanity check — disallow localhost/loopback for ArgoCD URL
+	argocdHost := strings.TrimPrefix(strings.TrimPrefix(cfg.ArgocdURL, "https://"), "http://")
+	argocdHost = strings.SplitN(argocdHost, "/", 2)[0] // strip path
+	argocdHost = strings.SplitN(argocdHost, ":", 2)[0] // strip port
+	if strings.EqualFold(argocdHost, "localhost") {
+		return fmt.Errorf("argocd_url must not target localhost")
+	}
+	if ip := net.ParseIP(argocdHost); ip != nil && ip.IsLoopback() {
+		return fmt.Errorf("argocd_url must not target loopback address %s", argocdHost)
+	}
 	if cfg.ArgocdUsername == "" {
 		return fmt.Errorf("argocd_username is required")
 	}
@@ -264,6 +276,9 @@ func validateConfig(cfg *Config) error {
 		if cfg.TelegramChatID == "" {
 			return fmt.Errorf("telegram_chat_id is required when notification_channel is 'telegram'")
 		}
+		if err := validateWebhookURL("telegram_webhook", cfg.TelegramWebhook); err != nil {
+			return err
+		}
 	case "email":
 		if cfg.EmailSmtpHost == "" {
 			return fmt.Errorf("email_smtp_host is required when notification_channel is 'email'")
@@ -278,16 +293,73 @@ func validateConfig(cfg *Config) error {
 		if cfg.SlackWebhook == "" {
 			return fmt.Errorf("slack_webhook is required when notification_channel is 'slack'")
 		}
+		if err := validateWebhookURL("slack_webhook", cfg.SlackWebhook); err != nil {
+			return err
+		}
 	case "teams":
 		if cfg.TeamsWebhook == "" {
 			return fmt.Errorf("teams_webhook is required when notification_channel is 'teams'")
+		}
+		if err := validateWebhookURL("teams_webhook", cfg.TeamsWebhook); err != nil {
+			return err
 		}
 	case "webhook":
 		if cfg.WebhookURL == "" {
 			return fmt.Errorf("webhook_url is required when notification_channel is 'webhook'")
 		}
+		if err := validateWebhookURL("webhook_url", cfg.WebhookURL); err != nil {
+			return err
+		}
 	}
 
+	return nil
+}
+
+// privateRanges contains CIDR blocks that must not be used as webhook targets (SSRF protection).
+var privateRanges = func() []*net.IPNet {
+	blocks := []string{
+		"127.0.0.0/8",    // loopback
+		"10.0.0.0/8",     // RFC 1918
+		"172.16.0.0/12",  // RFC 1918
+		"192.168.0.0/16", // RFC 1918
+		"169.254.0.0/16", // link-local / cloud metadata (e.g. 169.254.169.254)
+		"::1/128",        // IPv6 loopback
+		"fc00::/7",       // IPv6 unique local
+		"fe80::/10",      // IPv6 link-local
+	}
+	nets := make([]*net.IPNet, 0, len(blocks))
+	for _, b := range blocks {
+		_, n, _ := net.ParseCIDR(b)
+		if n != nil {
+			nets = append(nets, n)
+		}
+	}
+	return nets
+}()
+
+// validateWebhookURL ensures a webhook URL uses http/https and does not target private/internal addresses.
+func validateWebhookURL(fieldName, rawURL string) error {
+	if rawURL == "" {
+		return nil // empty is caught by required-field checks
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("%s: invalid URL: %w", fieldName, err)
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return fmt.Errorf("%s: URL must use http or https scheme (got %q)", fieldName, u.Scheme)
+	}
+	hostname := u.Hostname()
+	if strings.EqualFold(hostname, "localhost") {
+		return fmt.Errorf("%s: webhook URL must not target localhost", fieldName)
+	}
+	if ip := net.ParseIP(hostname); ip != nil {
+		for _, block := range privateRanges {
+			if block.Contains(ip) {
+				return fmt.Errorf("%s: webhook URL must not target private or reserved IP address %s", fieldName, hostname)
+			}
+		}
+	}
 	return nil
 }
 
