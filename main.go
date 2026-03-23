@@ -64,6 +64,7 @@ It can filter by projects, application names, and labels, and send notifications
 	rootCmd.Flags().StringP("output-format", "o", "table", "Output format: 'table', 'json', or 'markdown'")
 	rootCmd.Flags().StringP("log-format", "l", "json", "Log format: 'json' or 'text'")
 	rootCmd.Flags().BoolP("verbose", "v", false, "Enable verbose logging")
+	rootCmd.Flags().String("message-template", "", "Custom Go text/template for notification messages (per-app)")
 
 	// Bind flags to viper
 	if err := viper.BindPFlags(rootCmd.Flags()); err != nil {
@@ -128,7 +129,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	// Send notifications if configured
 	if clients.notifier != nil {
-		if err := sendNotifications(ctx, clients.notifier, results, logger); err != nil {
+		if err := sendNotifications(ctx, clients.notifier, results, cfg.MessageTemplate, logger); err != nil {
 			logger.WithError(err).Warn("Failed to send notifications")
 		}
 	}
@@ -696,7 +697,7 @@ func renderMarkdown(cat categorizedResults, w io.Writer) error {
 }
 
 // sendNotifications sends notifications via the configured notifier
-func sendNotifications(ctx context.Context, notifier notification.Notifier, results []ApplicationCheckResult, logger *logrus.Entry) error {
+func sendNotifications(ctx context.Context, notifier notification.Notifier, results []ApplicationCheckResult, messageTemplate string, logger *logrus.Entry) error {
 	// Check if there are updates in a single loop
 	var updatesAvailable []ApplicationCheckResult
 	for _, result := range results {
@@ -728,6 +729,13 @@ func sendNotifications(ctx context.Context, notifier notification.Notifier, resu
 
 	// Build notification messages using the formatter
 	formatter := notification.NewMessageFormatter()
+	if messageTemplate != "" {
+		if tmplFormatter, err := notification.NewMessageFormatterWithTemplate(messageTemplate); err != nil {
+			logger.WithError(err).Warn("Invalid message_template, using default format")
+		} else {
+			formatter = tmplFormatter
+		}
+	}
 	messages := formatter.FormatMessages(updates)
 
 	logger.WithField("message_count", len(messages)).Info("Sending notifications")

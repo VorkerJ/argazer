@@ -639,7 +639,7 @@ func TestSendNotifications_NoUpdates(t *testing.T) {
 		},
 	}
 
-	err := sendNotifications(context.Background(), notifier, results, logger)
+	err := sendNotifications(context.Background(), notifier, results, "", logger)
 	require.NoError(t, err)
 	assert.False(t, notifier.SendCalled, "Should not send notification when no updates")
 }
@@ -659,7 +659,7 @@ func TestSendNotifications_WithUpdates(t *testing.T) {
 		},
 	}
 
-	err := sendNotifications(context.Background(), notifier, results, logger)
+	err := sendNotifications(context.Background(), notifier, results, "", logger)
 	require.NoError(t, err)
 	assert.True(t, notifier.SendCalled, "Should send notification when updates available")
 }
@@ -679,7 +679,7 @@ func TestSendNotifications_Error(t *testing.T) {
 		},
 	}
 
-	err := sendNotifications(context.Background(), notifier, results, logger)
+	err := sendNotifications(context.Background(), notifier, results, "", logger)
 	require.Error(t, err)
 	assert.True(t, notifier.SendCalled, "Should attempt to send notification")
 }
@@ -759,7 +759,7 @@ func TestSendNotifications_MultipleMessages(t *testing.T) {
 		})
 	}
 
-	err := sendNotifications(context.Background(), notifier, results, logger)
+	err := sendNotifications(context.Background(), notifier, results, "", logger)
 	require.NoError(t, err)
 	assert.True(t, notifier.SendCalled)
 }
