@@ -36,6 +36,14 @@ spec:
             - name: argazer
               image: {{ include "argazer.image" . }}
               imagePullPolicy: {{ .Values.image.pullPolicy }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: true
+                runAsNonRoot: true
+                runAsUser: 1001
               args:
                 - --config
                 - /app/config.yaml

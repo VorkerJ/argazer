@@ -101,15 +101,15 @@ podAnnotations: {}
 securityContext:
   runAsNonRoot: true
   runAsUser: 1001
-  readOnlyRootFilesystem: true
+  fsGroup: 1001
 
-resources: {}
-#  requests:
-#    cpu: 100m
-#    memory: 64Mi
-#  limits:
-#    cpu: 500m
-#    memory: 256Mi
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
 
 nodeSelector: {}
 tolerations: []
