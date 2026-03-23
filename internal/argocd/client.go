@@ -2,9 +2,7 @@ package argocd
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/argoproj/argo-cd/v2/pkg/apiclient"
@@ -29,16 +27,6 @@ func NewClient(serverURL, username, password string, insecure bool, logger *logr
 		"insecure": insecure,
 	}).Info("Creating ArgoCD API client")
 
-	// Create HTTP client with optional TLS skip verification
-	var httpClient *http.Client
-	if insecure {
-		httpClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		}
-	}
-
 	// Create ArgoCD client options
 	opts := apiclient.ClientOptions{
 		ServerAddr: serverURL,
@@ -46,8 +34,6 @@ func NewClient(serverURL, username, password string, insecure bool, logger *logr
 		Insecure:   insecure,
 		GRPCWeb:    true, // Use gRPC-Web mode to avoid warnings and support HTTP proxies
 	}
-
-	_ = httpClient // Will be used for direct HTTP calls if needed
 
 	// Create API client
 	apiClient, err := apiclient.NewClient(&opts)
