@@ -1,0 +1,17 @@
+apiVersion: v2
+name: argazer
+description: Monitor ArgoCD applications for Helm chart updates and send notifications
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - argocd
+  - helm
+  - monitoring
+  - updates
+home: https://github.com/VorkerJ/argazer
+sources:
+  - https://github.com/VorkerJ/argazer
+maintainers:
+  - name: VorkerJ
+    url: https://github.com/VorkerJ
