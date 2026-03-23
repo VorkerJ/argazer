@@ -1,6 +1,6 @@
 ![Claude Assisted](https://img.shields.io/badge/Made%20with-Claude-8A2BE2?logo=anthropic)
-![CI](https://github.com/k-krew/argazer/actions/workflows/ci.yml/badge.svg)
-[![codecov](https://codecov.io/gh/kreicer/argazer/branch/main/graph/badge.svg)](https://codecov.io/gh/kreicer/argazer)
+![CI](https://github.com/VorkerJ/argazer/actions/workflows/ci.yml/badge.svg)
+[![codecov](https://codecov.io/gh/VorkerJ/argazer/branch/main/graph/badge.svg)](https://codecov.io/gh/VorkerJ/argazer)
 
 # Argazer
 
@@ -55,7 +55,7 @@ Application: cert-manager
 ### From Source
 
 ```bash
-git clone git@github.com:kreicer/argazer.git
+git clone git@github.com:VorkerJ/argazer.git
 cd argazer
 go build -o argazer .
 ```
@@ -66,10 +66,10 @@ Multi-architecture images available for **AMD64** and **ARM64** (Apple Silicon, 
 
 ```bash
 # Pull the latest image (automatically selects the right architecture)
-docker pull ghcr.io/kreicer/argazer:latest
+docker pull ghcr.io/VorkerJ/argazer:latest
 
 # Or specific version
-docker pull ghcr.io/kreicer/argazer:v1.0.4
+docker pull ghcr.io/VorkerJ/argazer:v1.0.4
 
 # Or build locally
 docker build -t argazer:latest .
@@ -429,7 +429,7 @@ Add to your crontab to run every hour:
 # Using config file (mount to /app/config.yaml)
 docker run --rm \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
-  ghcr.io/kreicer/argazer:latest
+  ghcr.io/VorkerJ/argazer:latest
 
 # Using environment variables only
 docker run --rm \
@@ -439,22 +439,22 @@ docker run --rm \
   -e AG_NOTIFICATION_CHANNEL="telegram" \
   -e AG_TELEGRAM_WEBHOOK="https://api.telegram.org/bot.../sendMessage" \
   -e AG_TELEGRAM_CHAT_ID="123456789" \
-  ghcr.io/kreicer/argazer:latest
+  ghcr.io/VorkerJ/argazer:latest
 
 # Override default config path
 docker run --rm \
   -v $(pwd)/custom-config.yaml:/config/argazer.yaml:ro \
-  ghcr.io/kreicer/argazer:latest --config /config/argazer.yaml
+  ghcr.io/VorkerJ/argazer:latest --config /config/argazer.yaml
 
 # With verbose logging and text logs for debugging
 docker run --rm \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
-  ghcr.io/kreicer/argazer:latest --verbose --log-format=text
+  ghcr.io/VorkerJ/argazer:latest --verbose --log-format=text
 
 # Run with specific architecture (if needed)
 docker run --rm --platform linux/arm64 \
   -v $(pwd)/config.yaml:/app/config.yaml:ro \
-  ghcr.io/kreicer/argazer:latest
+  ghcr.io/VorkerJ/argazer:latest
 
 # Using docker-compose (see example below)
 docker-compose up
@@ -632,7 +632,7 @@ version: '3.8'
 
 services:
   argazer:
-    image: ghcr.io/kreicer/argazer:latest
+    image: ghcr.io/VorkerJ/argazer:latest
     # Or build locally:
     # build: .
     environment:
@@ -1197,7 +1197,7 @@ jobs:
 ```yaml
 argazer-check:
   stage: check
-  image: ghcr.io/kreicer/argazer:latest
+  image: ghcr.io/VorkerJ/argazer:latest
   script:
     - argazer
   variables:
