@@ -11,6 +11,8 @@ import (
 	"sync"
 	"syscall"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/argoproj/argo-cd/v2/pkg/apis/application/v1alpha1"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -65,6 +67,7 @@ It can filter by projects, application names, and labels, and send notifications
 	rootCmd.Flags().StringP("log-format", "l", "json", "Log format: 'json' or 'text'")
 	rootCmd.Flags().BoolP("verbose", "v", false, "Enable verbose logging")
 	rootCmd.Flags().String("message-template", "", "Custom Go text/template for notification messages (per-app)")
+	rootCmd.Flags().String("mock-apps", "", "Path to YAML file with mock apps — skips ArgoCD connection (for local testing)")
 
 	// Bind flags to viper
 	if err := viper.BindPFlags(rootCmd.Flags()); err != nil {
@@ -113,8 +116,14 @@ func run(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	// Fetch applications from ArgoCD
-	apps, err := fetchApplications(ctx, clients.argocd, cfg, logger)
+	// Fetch applications — from ArgoCD or from mock file
+	var apps []*v1alpha1.Application
+	if cfg.MockAppsFile != "" {
+		logger.WithField("file", cfg.MockAppsFile).Info("Mock mode: loading apps from file (skipping ArgoCD)")
+		apps, err = loadMockApps(cfg.MockAppsFile)
+	} else {
+		apps, err = fetchApplications(ctx, clients.argocd, cfg, logger)
+	}
 	if err != nil {
 		return err
 	}
@@ -168,13 +177,15 @@ func initializeClients(ctx context.Context, cfg *config.Config, logger *logrus.E
 		return nil, fmt.Errorf("failed to create auth provider: %w", err)
 	}
 
-	// Create ArgoCD API client
-	argoLogger := logger.WithField("component", "argocd")
-	argoClient, err := argocd.NewClient(ctx, cfg.ArgocdURL, cfg.ArgocdUsername, cfg.ArgocdPassword, cfg.ArgocdInsecure, argoLogger)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create ArgoCD client: %w", err)
+	// Create ArgoCD API client (skipped in mock mode)
+	if cfg.MockAppsFile == "" {
+		argoLogger := logger.WithField("component", "argocd")
+		argoClient, err := argocd.NewClient(ctx, cfg.ArgocdURL, cfg.ArgocdUsername, cfg.ArgocdPassword, cfg.ArgocdInsecure, argoLogger)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create ArgoCD client: %w", err)
+		}
+		c.argocd = argoClient
 	}
-	c.argocd = argoClient
 
 	// Create helm checker
 	helmLogger := logger.WithField("component", "helm")
@@ -791,4 +802,43 @@ func setupSignalHandler(logger *logrus.Entry) (context.Context, context.CancelFu
 	}()
 
 	return ctx, cancel
+}
+
+// MockApp is the schema for entries in a mock apps YAML file.
+type MockApp struct {
+	Name           string `yaml:"name"`
+	Project        string `yaml:"project"`
+	Chart          string `yaml:"chart"`
+	RepoURL        string `yaml:"repo_url"`
+	CurrentVersion string `yaml:"current_version"`
+}
+
+// loadMockApps reads a YAML file of MockApp entries and converts them to ArgoCD Application objects.
+func loadMockApps(path string) ([]*v1alpha1.Application, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read mock apps file %q: %w", path, err)
+	}
+
+	var mocks []MockApp
+	if err := yaml.Unmarshal(data, &mocks); err != nil {
+		return nil, fmt.Errorf("failed to parse mock apps file: %w", err)
+	}
+	if len(mocks) == 0 {
+		return nil, fmt.Errorf("mock apps file contains no entries")
+	}
+
+	apps := make([]*v1alpha1.Application, 0, len(mocks))
+	for _, m := range mocks {
+		app := &v1alpha1.Application{}
+		app.Name = m.Name
+		app.Spec.Project = m.Project
+		app.Spec.Source = &v1alpha1.ApplicationSource{
+			RepoURL:        m.RepoURL,
+			Chart:          m.Chart,
+			TargetRevision: m.CurrentVersion,
+		}
+		apps = append(apps, app)
+	}
+	return apps, nil
 }

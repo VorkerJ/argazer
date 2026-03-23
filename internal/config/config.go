@@ -75,6 +75,7 @@ type Config struct {
 	VersionConstraint string `mapstructure:"version_constraint"` // Version constraint: "major", "minor", "patch" (default: "major")
 	OutputFormat      string `mapstructure:"output_format"`      // Output format: "table", "json", "markdown" (default: "table")
 	MessageTemplate   string `mapstructure:"message_template"`   // Custom notification message template (Go text/template syntax)
+	MockAppsFile      string `mapstructure:"mock_apps"`          // Path to YAML file with mock apps — skips ArgoCD connection
 
 	// Repository authentication
 	RepositoryAuth []RepositoryAuth `mapstructure:"repository_auth"`
@@ -138,6 +139,7 @@ func setDefaults() {
 	viper.SetDefault("teams_webhook", "")
 	viper.SetDefault("webhook_url", "")
 	viper.SetDefault("message_template", "")
+	viper.SetDefault("mock_apps", "")
 
 	// Array/slice defaults
 	viper.SetDefault("projects", []string{"*"})
@@ -215,10 +217,16 @@ func registerFlagAliases() {
 	viper.RegisterAlias("output_format", "output-format")
 	viper.RegisterAlias("log_format", "log-format")
 	viper.RegisterAlias("message_template", "message-template")
+	viper.RegisterAlias("mock_apps", "mock-apps")
 }
 
 // validateConfig validates the loaded configuration
 func validateConfig(cfg *Config) error {
+	// In mock mode ArgoCD credentials are not needed
+	if cfg.MockAppsFile != "" {
+		return validateNonArgoFields(cfg)
+	}
+
 	// Validate required fields
 	if cfg.ArgocdURL == "" {
 		return fmt.Errorf("argocd_url is required")
@@ -312,6 +320,23 @@ func validateConfig(cfg *Config) error {
 		}
 	}
 
+	return nil
+}
+
+// validateNonArgoFields validates all config fields except ArgoCD connection — used in mock mode.
+func validateNonArgoFields(cfg *Config) error {
+	if cfg.VersionConstraint != "" && cfg.VersionConstraint != VersionConstraintMajor && cfg.VersionConstraint != VersionConstraintMinor && cfg.VersionConstraint != VersionConstraintPatch {
+		return fmt.Errorf("version_constraint must be one of: '%s', '%s', '%s'", VersionConstraintMajor, VersionConstraintMinor, VersionConstraintPatch)
+	}
+	if cfg.VersionConstraint == "" {
+		cfg.VersionConstraint = VersionConstraintMajor
+	}
+	if cfg.OutputFormat == "" {
+		cfg.OutputFormat = OutputFormatTable
+	}
+	if cfg.LogFormat == "" {
+		cfg.LogFormat = LogFormatJSON
+	}
 	return nil
 }
 
