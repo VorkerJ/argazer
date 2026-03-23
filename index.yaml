@@ -2,8 +2,29 @@ apiVersion: v1
 entries:
   argazer:
   - apiVersion: v2
+    appVersion: v1.1.1
+    created: "2026-03-23T22:54:56.01642705Z"
+    description: Monitor ArgoCD applications for Helm chart updates and send notifications
+    digest: 92b2c68404d878ae6262cd0adb886f0cfb84abd7fab7ba7e8fc84933efcc9f9f
+    home: https://github.com/VorkerJ/argazer
+    keywords:
+    - argocd
+    - helm
+    - monitoring
+    - updates
+    maintainers:
+    - name: VorkerJ
+      url: https://github.com/VorkerJ
+    name: argazer
+    sources:
+    - https://github.com/VorkerJ/argazer
+    type: application
+    urls:
+    - https://VorkerJ.github.io/argazer/argazer-v1.1.1.tgz
+    version: v1.1.1
+  - apiVersion: v2
     appVersion: v1.1.0
-    created: "2026-03-23T21:59:13.619845353Z"
+    created: "2026-03-23T22:54:56.016005649Z"
     description: Monitor ArgoCD applications for Helm chart updates and send notifications
     digest: fe64c1bdfd8107fc5c6857ea01707a2b65810099eb939d71825f1c327f88b68e
     home: https://github.com/VorkerJ/argazer
@@ -24,7 +45,7 @@ entries:
     version: v1.1.0
   - apiVersion: v2
     appVersion: v1.0.1
-    created: "2026-03-23T21:59:13.619381987Z"
+    created: "2026-03-23T22:54:56.015548492Z"
     description: Monitor ArgoCD applications for Helm chart updates and send notifications
     digest: ed3b719bea60cad8dc83c311bc1bb1f0a6a374d4c66479ec151bd8b2d5fc4a81
     home: https://github.com/VorkerJ/argazer
@@ -45,7 +66,7 @@ entries:
     version: v1.0.1
   - apiVersion: v2
     appVersion: v1.0.0
-    created: "2026-03-23T21:59:13.618930464Z"
+    created: "2026-03-23T22:54:56.015113617Z"
     description: Monitor ArgoCD applications for Helm chart updates and send notifications
     digest: 3c00bfe307e8b8fee72d4f04bc7a69053fdde9bae02517142a26515ceb0b33bb
     home: https://github.com/VorkerJ/argazer
@@ -64,4 +85,4 @@ entries:
     urls:
     - https://VorkerJ.github.io/argazer/argazer-v1.0.0.tgz
     version: v1.0.0
-generated: "2026-03-23T21:59:13.618335493Z"
+generated: "2026-03-23T22:54:56.014521856Z"
