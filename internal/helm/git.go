@@ -83,11 +83,12 @@ func (g *GitClient) GetLatestVersion(ctx context.Context, repoURL, chartPath str
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Clone options
+	// Clone options — NoCheckout skips working tree population, saving disk space
 	cloneOpts := &git.CloneOptions{
-		URL:      repoURL,
-		Progress: nil, // Silent clone
-		Tags:     git.AllTags,
+		URL:        repoURL,
+		Progress:   nil, // Silent clone
+		Tags:       git.AllTags,
+		NoCheckout: true,
 	}
 
 	// Add authentication if provided
@@ -246,11 +247,12 @@ func (g *GitClient) GetAllVersions(ctx context.Context, repoURL, chartPath strin
 	}
 	defer os.RemoveAll(tmpDir)
 
-	// Clone options
+	// Clone options — NoCheckout skips working tree population, saving disk space
 	cloneOpts := &git.CloneOptions{
-		URL:      repoURL,
-		Progress: nil,
-		Tags:     git.AllTags,
+		URL:        repoURL,
+		Progress:   nil,
+		Tags:       git.AllTags,
+		NoCheckout: true,
 	}
 
 	// Add authentication if provided
