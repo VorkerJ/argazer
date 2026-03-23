@@ -1,4 +1,3 @@
-![Claude Assisted](https://img.shields.io/badge/Made%20with-Claude-8A2BE2?logo=anthropic)
 ![CI](https://github.com/VorkerJ/argazer/actions/workflows/ci.yml/badge.svg)
 [![codecov](https://codecov.io/gh/VorkerJ/argazer/branch/main/graph/badge.svg)](https://codecov.io/gh/VorkerJ/argazer)
 
