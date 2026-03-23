@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "argazer.fullname" . }}
+  labels:
+    {{- include "argazer.labels" . | nindent 4 }}
+data:
+  config.yaml: |
+    argocd_url: {{ .Values.argocd.url | quote }}
+    argocd_insecure: {{ .Values.argocd.insecure }}
+
+    projects:
+    {{- range .Values.filters.projects }}
+      - {{ . | quote }}
+    {{- end }}
+
+    app_names:
+    {{- range .Values.filters.appNames }}
+      - {{ . | quote }}
+    {{- end }}
+
+    {{- if .Values.filters.labels }}
+    labels:
+    {{- range $key, $value := .Values.filters.labels }}
+      {{ $key }}: {{ $value | quote }}
+    {{- end }}
+    {{- end }}
+
+    notification_channel: {{ .Values.notifications.channel | quote }}
+
+    {{- if eq .Values.notifications.channel "email" }}
+    email_smtp_host: {{ .Values.notifications.email.smtpHost | quote }}
+    email_smtp_port: {{ .Values.notifications.email.smtpPort }}
+    email_from: {{ .Values.notifications.email.from | quote }}
+    email_use_tls: {{ .Values.notifications.email.useTLS }}
+    email_to:
+    {{- range .Values.notifications.email.to }}
+      - {{ . | quote }}
+    {{- end }}
+    {{- end }}
+
+    verbose: {{ .Values.config.verbose }}
+    concurrency: {{ .Values.config.concurrency }}
+    version_constraint: {{ .Values.config.versionConstraint | quote }}
+    output_format: {{ .Values.config.outputFormat | quote }}
+    log_format: {{ .Values.config.logFormat | quote }}
+    {{- if .Values.config.sourceName }}
+    source_name: {{ .Values.config.sourceName | quote }}
+    {{- end }}
+
+    {{- if .Values.repositoryAuth }}
+    repository_auth:
+    {{- range .Values.repositoryAuth }}
+      - url: {{ .url | quote }}
+    {{- end }}
+    {{- end }}
+    {{- /* username/password injected via AG_AUTH_USER_N / AG_AUTH_PASS_N env vars in the CronJob */}}
