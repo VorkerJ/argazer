@@ -11,7 +11,7 @@ import (
 	"argazer/internal/auth"
 
 	"github.com/sirupsen/logrus"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // Checker checks Helm repositories for new chart versions

@@ -76,6 +76,44 @@ func TestParseIndex_SizeLimitExceeded(t *testing.T) {
 	}
 }
 
+func TestParseIndex_TimeFieldDeserialization(t *testing.T) {
+	logger := logrus.NewEntry(logrus.New())
+	authProvider, _ := auth.NewProvider(nil, logger)
+	checker, _ := NewChecker(authProvider, logger)
+
+	// Unquoted YAML timestamps — real Helm index.yaml format.
+	// yaml.v3 only auto-decodes bare RFC3339 timestamps as time.Time; quoted strings stay as strings.
+	yamlData := `apiVersion: v1
+generated: 2024-01-15T10:30:00Z
+entries:
+  mychart:
+    - name: mychart
+      version: 1.2.3
+      description: test chart
+      created: 2024-01-10T08:00:00.000Z
+      digest: abc123
+      urls:
+        - https://example.com/mychart-1.2.3.tgz
+`
+	index, err := checker.parseIndex(strings.NewReader(yamlData))
+	if err != nil {
+		t.Fatalf("parseIndex failed: %v", err)
+	}
+	if index.Generated.IsZero() {
+		t.Error("Generated time.Time field is zero — yaml time parsing regression")
+	}
+	entries, ok := index.Entries["mychart"]
+	if !ok || len(entries) == 0 {
+		t.Fatal("expected mychart entries")
+	}
+	if entries[0].Version != "1.2.3" {
+		t.Errorf("version = %s, want 1.2.3", entries[0].Version)
+	}
+	if entries[0].Created.IsZero() {
+		t.Error("Entry.Created is zero — yaml time parsing regression")
+	}
+}
+
 func TestFindLatestSemver(t *testing.T) {
 	logger := logrus.NewEntry(logrus.New())
 
