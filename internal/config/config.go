@@ -72,6 +72,7 @@ type Config struct {
 	Concurrency       int    `mapstructure:"concurrency"`        // Number of concurrent workers for checking applications
 	VersionConstraint string `mapstructure:"version_constraint"` // Version constraint: "major", "minor", "patch" (default: "major")
 	OutputFormat      string `mapstructure:"output_format"`      // Output format: "table", "json", "markdown" (default: "table")
+	MessageTemplate   string `mapstructure:"message_template"`   // Custom notification message template (Go text/template syntax)
 
 	// Repository authentication
 	RepositoryAuth []RepositoryAuth `mapstructure:"repository_auth"`
@@ -134,6 +135,7 @@ func setDefaults() {
 	viper.SetDefault("slack_webhook", "")
 	viper.SetDefault("teams_webhook", "")
 	viper.SetDefault("webhook_url", "")
+	viper.SetDefault("message_template", "")
 
 	// Array/slice defaults
 	viper.SetDefault("projects", []string{"*"})
@@ -210,6 +212,7 @@ func registerFlagAliases() {
 	viper.RegisterAlias("version_constraint", "version-constraint")
 	viper.RegisterAlias("output_format", "output-format")
 	viper.RegisterAlias("log_format", "log-format")
+	viper.RegisterAlias("message_template", "message-template")
 }
 
 // validateConfig validates the loaded configuration
