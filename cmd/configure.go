@@ -26,11 +26,15 @@ func NewConfigureCmd() *cobra.Command {
 
 This command will guide you through setting up:
 - ArgoCD connection
-- Notification channel
-- Version constraints
-- Output format
+- Application filtering (projects, app names)
+- Version constraints and output format
+- Custom notification message template (optional)
+- Notification channel (Telegram, Email, Slack, Teams, Webhook)
 
-The configuration will be saved to config.yaml and the notification channel will be tested.`,
+The configuration will be saved to config.yaml and the notification channel will be tested.
+
+Note: private repository authentication (repository_auth) is not covered by this wizard.
+Add it manually to config.yaml or use AG_AUTH_URL_N / AG_AUTH_USER_N / AG_AUTH_PASS_N env vars.`,
 		RunE: runConfigure,
 	}
 }
@@ -52,6 +56,7 @@ type ConfigWizard struct {
 	OutputFormat      string
 	LogFormat         string
 	Concurrency       int
+	MessageTemplate   string
 
 	// Notification
 	NotificationChannel string
@@ -135,6 +140,13 @@ func runConfigure(cmd *cobra.Command, args []string) error {
 
 	fmt.Println("\nConfiguration saved successfully!")
 	fmt.Println("\nYou can now run: argazer")
+	fmt.Println()
+	fmt.Println("Tip: to authenticate with private Helm/OCI registries, add to your config file:")
+	fmt.Println("  repository_auth:")
+	fmt.Println("    - url: \"registry.example.com\"")
+	fmt.Println("      username: \"user\"")
+	fmt.Println("      password: \"pass\"")
+	fmt.Println("Or use env vars: AG_AUTH_URL_1, AG_AUTH_USER_1, AG_AUTH_PASS_1 (recommended for production)")
 	fmt.Println()
 
 	return nil
@@ -265,7 +277,30 @@ func configureGeneral(wizard *ConfigWizard) error {
 		},
 	}
 
-	return survey.Ask(questions, wizard)
+	if err := survey.Ask(questions, wizard); err != nil {
+		return err
+	}
+
+	// Optional: custom message template
+	var useTmpl bool
+	if err := survey.AskOne(&survey.Confirm{
+		Message: "Configure a custom notification message template?",
+		Default: false,
+		Help:    "Uses Go text/template syntax. Leave off to use the default format.",
+	}, &useTmpl); err != nil {
+		return err
+	}
+	if useTmpl {
+		if err := survey.AskOne(&survey.Input{
+			Message: "Message template (Go text/template):",
+			Default: "{{.AppName}} ({{.Project}}): {{.CurrentVersion}} -> {{.LatestVersion}}\n",
+			Help:    "Fields: .AppName .Project .ChartName .CurrentVersion .LatestVersion .RepoURL .ConstraintApplied .HasUpdateOutsideConstraint .LatestVersionAll",
+		}, &wizard.MessageTemplate); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func configureNotifications(wizard *ConfigWizard) error {
@@ -502,6 +537,7 @@ func saveConfiguration(wizard *ConfigWizard) error {
 		LogFormat:           wizard.LogFormat,
 		Concurrency:         wizard.Concurrency,
 		NotificationChannel: wizard.NotificationChannel,
+		MessageTemplate:     wizard.MessageTemplate,
 	}
 
 	// Set notification-specific fields based on channel

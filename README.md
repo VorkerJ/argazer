@@ -85,6 +85,8 @@ helm install argazer vorkerj/argazer -f my-values.yaml
 
 See [charts/argazer/values.yaml](charts/argazer/values.yaml) for all available options.
 
+> **Note:** Notification credentials (Telegram token, Slack/Teams/Webhook URLs, email passwords) are **not** written into the ConfigMap. They are injected as environment variables from a Kubernetes Secret — either one you provide via `existingSecret`, or one the chart creates from inline `values.yaml` values. This keeps secrets out of plaintext config files.
+
 ### Using Docker
 
 Multi-architecture images available for **AMD64** and **ARM64** (Apple Silicon, Raspberry Pi, AWS Graviton, etc.):
@@ -757,7 +759,6 @@ Application: monitoring
   Chart: grafana
   Current Version: 6.50.0
   Status: Up to date within 'minor' constraint
-  Latest (minor): 6.50.0
   Note: Version 7.0.0 available outside constraint
   Repository: https://grafana.github.io/helm-charts
 
@@ -766,7 +767,6 @@ Application: logging
   Chart: loki
   Current Version: 5.8.0
   Status: Up to date within 'patch' constraint
-  Latest (patch): 5.8.0
   Note: Version 5.9.2 available outside constraint
   Repository: https://grafana.github.io/helm-charts
 
@@ -935,8 +935,7 @@ Clean markdown output ideal for reports and documentation:
 | **Chart** | grafana |
 | **Current Version** | 6.50.0 |
 | **Status** | Up to date within 'minor' constraint |
-| **Latest (minor)** | 6.50.0 |
-| **Note** | Version 7.0.0 available outside constraint |
+| **Latest Version (all)** | 7.0.0 |
 | **Repository** | https://grafana.github.io/helm-charts |
 
 ## Applications Skipped

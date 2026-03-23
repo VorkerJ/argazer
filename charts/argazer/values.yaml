@@ -33,7 +33,7 @@ config:
   outputFormat: "table"        # "table" | "json" | "markdown"
   logFormat: "json"            # "json" | "text"
   concurrency: 10
-  sourceName: ""
+  sourceName: "chart-repo"  # For multi-source apps — name of the Helm source to check
   verbose: false
 
 # Custom notification message template (optional, Go text/template syntax)
