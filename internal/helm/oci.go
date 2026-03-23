@@ -124,10 +124,15 @@ func (o *OCIChecker) getTagsFromOCI(ctx context.Context, repoURL, chartName stri
 		return nil, fmt.Errorf("OCI registry returned status %d", resp.StatusCode)
 	}
 
-	// Parse response
-	body, err := io.ReadAll(resp.Body)
+	// Parse response (limit size to prevent OOM from malicious registries)
+	const maxTagsResponseSize = 1 * 1024 * 1024 // 1 MB
+	limited := io.LimitReader(resp.Body, maxTagsResponseSize)
+	body, err := io.ReadAll(limited)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+	if len(body) == maxTagsResponseSize {
+		return nil, fmt.Errorf("OCI tags response exceeds maximum allowed size (1 MB)")
 	}
 
 	var tagsResp TagsResponse

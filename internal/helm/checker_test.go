@@ -1,8 +1,10 @@
 package helm
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"argazer/internal/auth"
@@ -54,6 +56,23 @@ func TestChecker_GetLatestVersion_ConcurrentCalls_NoRace(t *testing.T) {
 
 	for i := 0; i < numGoroutines; i++ {
 		<-done
+	}
+}
+
+func TestParseIndex_SizeLimitExceeded(t *testing.T) {
+	logger := logrus.NewEntry(logrus.New())
+	authProvider, _ := auth.NewProvider(nil, logger)
+	checker, _ := NewChecker(authProvider, logger)
+
+	const limit = 50 * 1024 * 1024
+	oversized := bytes.NewReader(make([]byte, limit+1))
+
+	_, err := checker.parseIndex(oversized)
+	if err == nil {
+		t.Fatal("expected error for oversized body, got nil")
+	}
+	if !strings.Contains(err.Error(), "exceeds maximum allowed size") {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }
 

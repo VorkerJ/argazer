@@ -239,12 +239,18 @@ func (c *Checker) getLatestVersionFromRepoWithConstraint(ctx context.Context, re
 	return result, nil
 }
 
+const maxIndexSize = 50 * 1024 * 1024 // 50 MB
+
 // parseIndex parses the Helm repository index YAML
 func (c *Checker) parseIndex(body io.Reader) (*Index, error) {
-	// Read the body
-	data, err := io.ReadAll(body)
+	// Limit body size to prevent OOM from malicious/large repositories
+	limited := io.LimitReader(body, maxIndexSize)
+	data, err := io.ReadAll(limited)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+	if len(data) == maxIndexSize {
+		return nil, fmt.Errorf("helm repository index exceeds maximum allowed size (50 MB)")
 	}
 
 	// Parse YAML

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"argazer/internal/auth"
@@ -240,6 +241,31 @@ func TestOCICheckerGetLatestVersion_WithAuthentication(t *testing.T) {
 
 	if !receivedAuth {
 		t.Error("Expected Authorization header to be sent, but it wasn't")
+	}
+}
+
+// TestGetTagsFromOCI_SizeLimitExceeded verifies OOM protection for large OCI tag responses
+func TestGetTagsFromOCI_SizeLimitExceeded(t *testing.T) {
+	const limit = 1 * 1024 * 1024
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(make([]byte, limit+1))
+	})
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	logger := logrus.NewEntry(logrus.New())
+	authProvider, _ := auth.NewProvider(nil, logger)
+	checker := NewOCIChecker(authProvider, logger)
+
+	// Strip "http://" — getTagsFromOCI uses 127.0.0.1 detection for http scheme
+	registryURL := srv.URL[7:]
+	_, err := checker.getTagsFromOCI(context.Background(), registryURL, "testchart")
+	if err == nil {
+		t.Fatal("expected error for oversized OCI response, got nil")
+	}
+	if !strings.Contains(err.Error(), "exceeds maximum allowed size") {
+		t.Errorf("unexpected error message: %v", err)
 	}
 }
 
