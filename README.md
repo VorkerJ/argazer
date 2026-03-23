@@ -45,6 +45,7 @@ Application: cert-manager
 - **Traditional Helm Repos** - Supports classic HTTP-based Helm chart repositories
 - **Flexible filtering** - Filter by projects, application names, and labels
 - **Multiple notification channels** - Telegram, Email, Slack, Microsoft Teams, Generic Webhooks, or console-only output
+- **Custom message templates** - Define your own Go `text/template` for notification messages (per-app format, falls back to default on error)
 - **Secure ArgoCD connection** - Username/password authentication with optional TLS verification
 - **Environment variable support** - All settings configurable via AG_* environment variables
 - **Graceful error handling** - Clear error messages for unsupported scenarios
@@ -176,6 +177,16 @@ output_format: "table"
 # - "json": Structured JSON logs for production (default)
 # - "text": Human-readable text logs for development
 log_format: "json"
+
+# Custom Notification Message Template (optional)
+# Uses Go text/template syntax. Available fields:
+#   .AppName, .Project, .ChartName, .CurrentVersion, .LatestVersion,
+#   .RepoURL, .ConstraintApplied, .HasUpdateOutsideConstraint, .LatestVersionAll
+# If empty or invalid, the default format is used.
+# message_template: |
+#   🚀 *{{.AppName}}* ({{.Project}})
+#   📦 {{.ChartName}}: {{.CurrentVersion}} -> {{.LatestVersion}}
+#   🔗 {{.RepoURL}}
 ```
 
 ### Environment Variables
@@ -232,6 +243,9 @@ export AG_OUTPUT_FORMAT="table"  # "table", "json", or "markdown"
 
 # Log Format
 export AG_LOG_FORMAT="json"  # "json" or "text"
+
+# Custom Notification Message Template (optional)
+export AG_MESSAGE_TEMPLATE="{{.AppName}} {{.CurrentVersion}} -> {{.LatestVersion}}"
 ```
 
 ## ArgoCD RBAC Setup
@@ -1146,11 +1160,63 @@ JSON payload with separate subject and message fields:
 }
 ```
 
+## Custom Message Templates
+
+You can define a custom Go [`text/template`](https://pkg.go.dev/text/template) to control how each per-app notification line looks. This overrides the default format for all notification channels.
+
+### Available Template Fields
+
+| Field | Example |
+|-------|---------|
+| `.AppName` | `cert-manager` |
+| `.Project` | `internal` |
+| `.ChartName` | `cert-manager` |
+| `.CurrentVersion` | `1.18.5` |
+| `.LatestVersion` | `v1.20.0` |
+| `.RepoURL` | `https://charts.jetstack.io` |
+| `.ConstraintApplied` | `minor` |
+| `.HasUpdateOutsideConstraint` | `true` |
+| `.LatestVersionAll` | `2.0.0` |
+
+### Configuration
+
+Via `config.yaml`:
+```yaml
+message_template: |
+  🚀 *{{.AppName}}* ({{.Project}})
+  📦 {{.ChartName}}: {{.CurrentVersion}} -> {{.LatestVersion}}
+  🔗 {{.RepoURL}}
+```
+
+Via environment variable:
+```bash
+export AG_MESSAGE_TEMPLATE="{{.AppName}} {{.CurrentVersion}} -> {{.LatestVersion}}"
+```
+
+Via CLI flag:
+```bash
+./argazer --message-template="{{.AppName}} {{.CurrentVersion}} -> {{.LatestVersion}}"
+```
+
+Via Helm `values.yaml`:
+```yaml
+messageTemplate: |
+  🚀 *{{.AppName}}* ({{.Project}})
+  📦 {{.ChartName}}: {{.CurrentVersion}} -> {{.LatestVersion}}
+  🔗 {{.RepoURL}}
+```
+
+### Error Handling
+
+- **Invalid template syntax** — logged as a warning, default format used
+- **Template execution error** — logged as a warning per app, default format used for that app only
+- **Empty template** — default format used (same as not setting the option)
+
 ## Development
 
 ### Prerequisites
 
-- Go 1.21 or higher
+- Go 1.25 or higher
 - Access to an ArgoCD instance
 - golangci-lint (for development)
 
@@ -1267,12 +1333,12 @@ For email notification issues:
 
 ### Applications Skipped
 
-If applications are being skipped with "OCI/container registry" messages:
+If applications are being skipped:
 
-1. This is expected behavior - OCI repositories don't support traditional Helm index.yaml files
-2. Argazer can only check traditional Helm repositories (HTTP/HTTPS with index.yaml)
-3. For OCI repositories, version checking must be done differently (not currently supported)
-4. These skipped applications won't affect the update notifications for other apps
+1. Check the error reason shown for each skipped app
+2. For private registries, ensure credentials are configured via `AG_AUTH_URL_N` / `AG_AUTH_USER_N` / `AG_AUTH_PASS_N` environment variables
+3. Verify the repository URL is accessible from the machine running Argazer
+4. Use `--verbose` for detailed logs about each repository check
 
 ### Multi-Source Applications
 
