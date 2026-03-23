@@ -1,0 +1,117 @@
+image:
+  repository: ghcr.io/VorkerJ/argazer
+  # tag defaults to Chart.appVersion
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# -- REQUIRED: cron expression, e.g. "0 */6 * * *"
+schedule: ""
+
+# ArgoCD connection (url, username, password all required)
+argocd:
+  url: ""          # e.g. "argocd.example.com"
+  insecure: false
+  username: ""
+  password: ""
+  # If set, username/password are read from this existing Secret instead of inline values
+  existingSecret: ""
+  existingSecretKeys:
+    username: "argocd-username"
+    password: "argocd-password"
+
+# Application filtering
+filters:
+  projects:
+    - "*"
+  appNames:
+    - "*"
+  labels: {}
+
+# General config
+config:
+  versionConstraint: "major"   # "major" | "minor" | "patch"
+  outputFormat: "table"        # "table" | "json" | "markdown"
+  logFormat: "json"            # "json" | "text"
+  concurrency: 10
+  sourceName: ""
+  verbose: false
+
+# Notification settings
+notifications:
+  # "telegram" | "email" | "slack" | "teams" | "webhook" | ""
+  channel: ""
+
+  telegram:
+    webhook: ""
+    chatId: ""
+    existingSecret: ""
+    existingSecretKeys:
+      webhook: "telegram-webhook"
+      chatId: "telegram-chat-id"
+
+  email:
+    smtpHost: ""
+    smtpPort: 587
+    smtpUsername: ""
+    smtpPassword: ""
+    from: ""
+    to: []
+    useTLS: true
+    existingSecret: ""
+    existingSecretKeys:
+      smtpUsername: "email-smtp-username"
+      smtpPassword: "email-smtp-password"
+
+  slack:
+    webhook: ""
+    existingSecret: ""
+    existingSecretKeys:
+      webhook: "slack-webhook"
+
+  teams:
+    webhook: ""
+    existingSecret: ""
+    existingSecretKeys:
+      webhook: "teams-webhook"
+
+  webhook:
+    url: ""
+    existingSecret: ""
+    existingSecretKeys:
+      url: "webhook-url"
+
+# Private repository authentication (optional)
+# Each entry maps to AG_AUTH_URL_N / AG_AUTH_USER_N / AG_AUTH_PASS_N env vars
+repositoryAuth: []
+# - url: "harbor.example.com"
+#   username: ""
+#   password: ""
+#   existingSecret: ""       # if set, username/password taken from this Secret
+#   existingSecretKeys:
+#     username: "repo-username"
+#     password: "repo-password"
+
+serviceAccount:
+  create: false
+  name: ""
+  annotations: {}
+
+podAnnotations: {}
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  readOnlyRootFilesystem: true
+
+resources: {}
+#  requests:
+#    cpu: 100m
+#    memory: 64Mi
+#  limits:
+#    cpu: 500m
+#    memory: 256Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+imagePullSecrets: []
