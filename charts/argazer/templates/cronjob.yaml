@@ -1,0 +1,219 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "argazer.fullname" . }}
+  labels:
+    {{- include "argazer.labels" . | nindent 4 }}
+spec:
+  schedule: {{ required "schedule is required (e.g. \"0 */6 * * *\")" .Values.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "argazer.selectorLabels" . | nindent 12 }}
+          {{- with .Values.podAnnotations }}
+          annotations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        spec:
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          serviceAccountName: {{ include "argazer.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          restartPolicy: OnFailure
+          volumes:
+            - name: config
+              configMap:
+                name: {{ include "argazer.fullname" . }}
+          containers:
+            - name: argazer
+              image: {{ include "argazer.image" . }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args:
+                - --config
+                - /app/config.yaml
+              volumeMounts:
+                - name: config
+                  mountPath: /app/config.yaml
+                  subPath: config.yaml
+                  readOnly: true
+              env:
+                {{- /* ArgoCD credentials */}}
+                {{- if .Values.argocd.existingSecret }}
+                - name: AG_ARGOCD_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.argocd.existingSecret }}
+                      key: {{ .Values.argocd.existingSecretKeys.username }}
+                - name: AG_ARGOCD_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.argocd.existingSecret }}
+                      key: {{ .Values.argocd.existingSecretKeys.password }}
+                {{- else }}
+                - name: AG_ARGOCD_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "argazer.secretName" . }}
+                      key: argocd-username
+                - name: AG_ARGOCD_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "argazer.secretName" . }}
+                      key: argocd-password
+                {{- end }}
+
+                {{- /* Telegram */}}
+                {{- if eq .Values.notifications.channel "telegram" }}
+                {{- if .Values.notifications.telegram.existingSecret }}
+                - name: AG_TELEGRAM_WEBHOOK
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.notifications.telegram.existingSecret }}
+                      key: {{ .Values.notifications.telegram.existingSecretKeys.webhook }}
+                - name: AG_TELEGRAM_CHAT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.notifications.telegram.existingSecret }}
+                      key: {{ .Values.notifications.telegram.existingSecretKeys.chatId }}
+                {{- else }}
+                - name: AG_TELEGRAM_WEBHOOK
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "argazer.secretName" . }}
+                      key: telegram-webhook
+                - name: AG_TELEGRAM_CHAT_ID
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "argazer.secretName" . }}
+                      key: telegram-chat-id
+                {{- end }}
+                {{- end }}
+
+                {{- /* Email */}}
+                {{- if eq .Values.notifications.channel "email" }}
+                {{- if .Values.notifications.email.existingSecret }}
+                - name: AG_EMAIL_SMTP_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.notifications.email.existingSecret }}
+                      key: {{ .Values.notifications.email.existingSecretKeys.smtpUsername }}
+                - name: AG_EMAIL_SMTP_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.notifications.email.existingSecret }}
+                      key: {{ .Values.notifications.email.existingSecretKeys.smtpPassword }}
+                {{- else }}
+                - name: AG_EMAIL_SMTP_USERNAME
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "argazer.secretName" . }}
+                      key: email-smtp-username
+                      optional: true
+                - name: AG_EMAIL_SMTP_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "argazer.secretName" . }}
+                      key: email-smtp-password
+                      optional: true
+                {{- end }}
+                {{- end }}
+
+                {{- /* Slack */}}
+                {{- if eq .Values.notifications.channel "slack" }}
+                {{- if .Values.notifications.slack.existingSecret }}
+                - name: AG_SLACK_WEBHOOK
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.notifications.slack.existingSecret }}
+                      key: {{ .Values.notifications.slack.existingSecretKeys.webhook }}
+                {{- else }}
+                - name: AG_SLACK_WEBHOOK
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "argazer.secretName" . }}
+                      key: slack-webhook
+                {{- end }}
+                {{- end }}
+
+                {{- /* Teams */}}
+                {{- if eq .Values.notifications.channel "teams" }}
+                {{- if .Values.notifications.teams.existingSecret }}
+                - name: AG_TEAMS_WEBHOOK
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.notifications.teams.existingSecret }}
+                      key: {{ .Values.notifications.teams.existingSecretKeys.webhook }}
+                {{- else }}
+                - name: AG_TEAMS_WEBHOOK
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "argazer.secretName" . }}
+                      key: teams-webhook
+                {{- end }}
+                {{- end }}
+
+                {{- /* Generic Webhook */}}
+                {{- if eq .Values.notifications.channel "webhook" }}
+                {{- if .Values.notifications.webhook.existingSecret }}
+                - name: AG_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.notifications.webhook.existingSecret }}
+                      key: {{ .Values.notifications.webhook.existingSecretKeys.url }}
+                {{- else }}
+                - name: AG_WEBHOOK_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "argazer.secretName" . }}
+                      key: webhook-url
+                {{- end }}
+                {{- end }}
+
+                {{- /* Repository auth — indexed env vars */}}
+                {{- range $i, $auth := .Values.repositoryAuth }}
+                {{- $n := add $i 1 }}
+                - name: {{ printf "AG_AUTH_URL_%d" $n }}
+                  value: {{ $auth.url | quote }}
+                {{- if $auth.existingSecret }}
+                - name: {{ printf "AG_AUTH_USER_%d" $n }}
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ $auth.existingSecret }}
+                      key: {{ $auth.existingSecretKeys.username }}
+                - name: {{ printf "AG_AUTH_PASS_%d" $n }}
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ $auth.existingSecret }}
+                      key: {{ $auth.existingSecretKeys.password }}
+                {{- else }}
+                - name: {{ printf "AG_AUTH_USER_%d" $n }}
+                  value: {{ $auth.username | default "" | quote }}
+                - name: {{ printf "AG_AUTH_PASS_%d" $n }}
+                  value: {{ $auth.password | default "" | quote }}
+                {{- end }}
+                {{- end }}
+
+              {{- with .Values.resources }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
