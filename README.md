@@ -94,7 +94,7 @@ Multi-architecture images available for **AMD64** and **ARM64** (Apple Silicon, 
 docker pull ghcr.io/VorkerJ/argazer:latest
 
 # Or specific version
-docker pull ghcr.io/VorkerJ/argazer:v1.0.4
+docker pull ghcr.io/VorkerJ/argazer:v1.0.1
 
 # Or build locally
 docker build -t argazer:latest .
