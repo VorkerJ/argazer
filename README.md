@@ -96,7 +96,7 @@ Multi-architecture images available for **AMD64** and **ARM64** (Apple Silicon, 
 docker pull ghcr.io/VorkerJ/argazer:latest
 
 # Or specific version
-docker pull ghcr.io/VorkerJ/argazer:v1.0.1
+docker pull ghcr.io/VorkerJ/argazer:v1.1.1
 
 # Or build locally
 docker build -t argazer:latest .
@@ -454,6 +454,47 @@ AG_VERSION_CONSTRAINT="minor" ./argazer
 - **Production stability**: Use `minor` or `patch` to avoid breaking changes
 - **Security patches**: Use `patch` to only get bug fixes
 - **Stay current**: Use `major` (default) to see all updates
+
+### Local Debugging (Mock Mode)
+
+Run Argazer locally without a real ArgoCD instance using a mock apps file:
+
+```bash
+# Create a mock_apps.yaml file with test applications
+cat > mock_apps.yaml <<EOF
+- name: cert-manager
+  project: platform
+  chart: cert-manager
+  repo_url: https://charts.jetstack.io
+  current_version: "1.14.0"
+
+- name: ingress-nginx
+  project: production
+  chart: ingress-nginx
+  repo_url: https://kubernetes.github.io/ingress-nginx
+  current_version: "4.9.0"
+EOF
+
+# Run with mock apps (no ArgoCD credentials needed)
+./argazer --mock-apps mock_apps.yaml --output-format table --log-format text
+
+# Or via environment variable
+AG_MOCK_APPS=mock_apps.yaml ./argazer --output-format json
+```
+
+**Mock app fields:**
+
+| Field             | Description                          |
+|-------------------|--------------------------------------|
+| `name`            | Application name                     |
+| `project`         | ArgoCD project name                  |
+| `chart`           | Helm chart name                      |
+| `repo_url`        | Helm repo URL (HTTP or OCI)          |
+| `current_version` | Currently deployed chart version     |
+
+> **Note:** In mock mode ArgoCD credentials (`argocd_url`, `argocd_username`, `argocd_password`) are not required. The tool fetches real latest versions from Helm repositories — only the ArgoCD connection is mocked.
+
+A ready-to-use example file is included in the repo at [`mock_apps.yaml`](mock_apps.yaml).
 
 ### Cron Job Example
 
